@@ -1,5 +1,6 @@
 #include "post.h"
 #include "rng.h"
+#include "soft_assert.h"
 
 void PostInit(Post *p) {
     p->car = -1;
@@ -44,12 +45,15 @@ int PostWork(Post *p) {
 }
 
 void PostStart(Post *p, int car, int duration) {
+    SOFT_ASSERT(p->car < 0, "post is already taken");
+    SOFT_ASSERT(p->repair == 0, "broken post cannot start");
     p->car = car;
     p->left = duration;
     p->duration = duration;
 }
 
 int PostRelease(Post *p) {
+    SOFT_ASSERT(p->car >= 0, "releasing an empty post");
     int car = p->car;
     p->car = -1;
     p->left = 0;

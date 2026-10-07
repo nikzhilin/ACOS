@@ -3,7 +3,7 @@
 #include "line.h"
 #include "stats.h"
 
-// всё по программам; "ожидание" = время на мойке минус время самих операций
+/// всё по программам; "ожидание" = время на мойке минус время самих операций
 static int washed[MAX_PROGRAMS];
 static long timeSum[MAX_PROGRAMS];
 static long waitSum[MAX_PROGRAMS];

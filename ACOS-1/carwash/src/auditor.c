@@ -24,7 +24,7 @@ static int *places = NULL;      // в скольких местах нашли �
 static int capacity = 0;
 static int firstActive = 0;  // все машины до этого номера уже уехали
 
-// тоже только по событиям FAIL / REPAIR
+/// тоже только по событиям FAIL / REPAIR
 static int broken[MAX_STAGES][MAX_POSTS];
 
 static const char *invariantName[INVARIANTS + 1] = {
@@ -58,8 +58,8 @@ static void Grow(int cars) {
     capacity = newCap;
 }
 
-// Пока ошибка не исправлена, она находится после каждого события.
-// Считаем все случаи, а печатаем каждое сообщение только один раз.
+/// Пока ошибка не исправлена, она находится после каждого события.
+/// Считаем все случаи, а печатаем каждое сообщение только один раз.
 static void Violation(int inv, const Event *e, const char *fmt, ...) {
     static char printed[MAX_REPORTS][200];
     char text[200], clock[16];
@@ -83,7 +83,7 @@ static void Violation(int inv, const Event *e, const char *fmt, ...) {
     dprintf(errOut, " [%s] I%d violated (%s): %s\n", clock, inv, invariantName[inv], text);
 }
 
-// I1, I2, I5: обходим все очереди и посты
+/// I1, I2, I5: обходим все очереди и посты
 static void CheckPlaces(const Event *e, const Line *l) {
     const Config *cfg = l->cfg;
     // уехавшие машины не перебираем, иначе на долгом прогоне будет O(n^2)
@@ -137,7 +137,7 @@ static void CheckPlaces(const Event *e, const Line *l) {
     }
 }
 
-// I3: новая стадия должна быть следующей по маршруту
+/// I3: новая стадия должна быть следующей по маршруту
 static void CheckRoute(const Event *e, const Line *l) {
     int c = e->car;
     const ProgramSpec *p = &l->cfg->program[l->cars[c].program];

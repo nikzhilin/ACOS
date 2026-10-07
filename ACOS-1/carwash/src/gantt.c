@@ -9,11 +9,11 @@
 #define WIDTH     48  // с подписями строка как раз влезает в 80 колонок
 #define LABEL_GAP 10
 
-// в том же порядке, что и PostState
+/// в том же порядке, что и PostState
 static const char SYMBOL[] = {'.', '#', '=', 'X'};
 static const char *COLOR[] = {"\033[2m", "\033[32m", "\033[33m", "\033[1;31m"};
 
-// timeline[s][p][t] - состояние поста p стадии s в минуту t
+/// timeline[s][p][t] - состояние поста p стадии s в минуту t
 static char *timeline[MAX_STAGES][MAX_POSTS];
 static int length = 0, capacity = 0;
 
@@ -37,7 +37,7 @@ void GanttListener(const Event *e, const struct Line *l) {
     ++length;
 }
 
-// Шаг меток времени: "круглое" число минут, чтобы метки не слипались
+/// Шаг меток времени: "круглое" число минут, чтобы метки не слипались
 static int LabelStep(int bucket) {
     static const int steps[] = {10, 15, 20, 30, 60, 120, 180, 240, 360, 720, 1440};
     for (size_t i = 0; i < sizeof(steps) / sizeof(steps[0]); ++i) {
@@ -52,8 +52,8 @@ static int LabelStep(int bucket) {
     return step;
 }
 
-// Что чаще всего было с постом на отрезке [from, to). Ремонт рисуем, даже если
-// он занял только треть отрезка, иначе короткие поломки не видно.
+/// Что чаще всего было с постом на отрезке [from, to). Ремонт рисуем, даже если
+/// он занял только треть отрезка, иначе короткие поломки не видно.
 static int Dominant(const char *row, int from, int to) {
     int count[4] = {0};
     for (int t = from; t < to; ++t) {

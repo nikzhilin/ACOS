@@ -1,11 +1,13 @@
 #include "car.h"
 #include "rng.h"
+#include "soft_assert.h"
 
 void CarInit(Car *car, const Config *cfg, int now) {
     int total = 0;
     for (int i = 0; i < cfg->programs; ++i) {
         total += cfg->program[i].weight;
     }
+    SOFT_ASSERT(total > 0, "programs have no weight");
     // бросаем число от 1 до суммы весов и смотрим, в чей отрезок попали
     int roll = RngRange(1, total);
     int p = 0;
@@ -24,6 +26,7 @@ void CarInit(Car *car, const Config *cfg, int now) {
 }
 
 int CarStage(const Car *car, const Config *cfg) {
+    SOFT_ASSERT(car->step < cfg->program[car->program].len, "route is already over");
     return cfg->program[car->program].route[car->step];
 }
 

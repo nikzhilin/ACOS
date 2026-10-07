@@ -35,7 +35,7 @@ typedef struct {
 static Recent recent[RECENT];
 static int recentCount = 0, recentHead = 0;
 
-// кадр собираем в памяти и выводим одним write(), иначе экран мерцает
+/// кадр собираем в памяти и выводим одним write(), иначе экран мерцает
 static char frame[32768];
 static int frameLen = 0;
 
@@ -71,13 +71,13 @@ static void PutCar(const Line *l, int c, int width) {
     Put("%s%0*d" RESET, PROGRAM_COLOR[l->cars[c].program], width, c + 1);
 }
 
-// Пустое место под номер машины: " ·" или "  ·"
+/// Пустое место под номер машины: " ·" или "  ·"
 static void PutEmpty(int width) {
     Put("%*s" DIM "·" RESET, width - 1, "");
 }
 
-// Пост: номер машины и полоска, которая заполняется по ходу мойки.
-// Словами пишем только особые случаи: машина ждёт или пост в ремонте.
+/// Пост: номер машины и полоска, которая заполняется по ходу мойки.
+/// Словами пишем только особые случаи: машина ждёт или пост в ремонте.
 static void PutPost(const Line *l, const Post *post, int width) {
     if (post->car >= 0) {
         PutCar(l, post->car, width);
@@ -102,7 +102,7 @@ static void PutPost(const Line *l, const Post *post, int width) {
     Put("   ");
 }
 
-// Очередь: машины и свободные места, выровнено по самой длинной очереди
+/// Очередь: машины и свободные места, выровнено по самой длинной очереди
 static void PutQueue(const Line *l, int s, int width, int columnWidth) {
     const Buffer *q = &l->stage[s].queue;
     int slots = q->cap > q->count ? q->cap : q->count;
@@ -117,7 +117,7 @@ static void PutQueue(const Line *l, int s, int width, int columnWidth) {
     Put("%*s", columnWidth - (slots * (width + 1)), "");
 }
 
-// Шапка: время, полоска рабочего дня, что сейчас с линией и цвета программ
+/// Шапка: время, полоска рабочего дня, что сейчас с линией и цвета программ
 static void PutHeader(const Line *l) {
     char clock[16];
     EventClock(l->now, clock, sizeof(clock));
@@ -148,7 +148,7 @@ static void PutHeader(const Line *l) {
     Put(EOL EOL);
 }
 
-// Счётчики, аудитор и последние события
+/// Счётчики, аудитор и последние события
 static void PutFooter(const Line *l) {
     Put(" washed %d" DIM " · " RESET "inside %d" DIM " · " RESET "turned away %d" DIM " · " RESET
         "breakdowns %d   ",

@@ -48,7 +48,7 @@ const char *ConfigRuleName(PriorityRule rule) {
     return names[rule];
 }
 
-// strtol с проверкой, что строка целиком - число и влезает в int
+/// strtol с проверкой, что строка целиком - число и влезает в int
 int ParseInt(const char *s, int *out) {
     char *end;
     errno = 0;
@@ -60,7 +60,7 @@ int ParseInt(const char *s, int *out) {
     return 0;
 }
 
-// "2 6" -> 2 и 6
+/// "2 6" -> 2 и 6
 static int ParsePair(char *s, int *a, int *b) {
     char *save = NULL;
     char *first = strtok_r(s, " \t", &save);
@@ -86,7 +86,7 @@ static int StageIndex(const Config *c, const char *name) {
     return -1;
 }
 
-// key = tok[0] tok[1] ... tok[n-1]
+/// key = tok[0] tok[1] ... tok[n-1]
 static int ParseKey(Config *c, const char *key, char **tok, int n, char *err, int errSize) {
     int bad = 0;  // не 0 - значение не разобралось
     if (strcmp(key, "stage") == 0 && n == 5) {

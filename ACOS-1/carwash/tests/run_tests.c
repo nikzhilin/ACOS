@@ -283,6 +283,7 @@ static void TestSabotage(void) {
     puts("== 7. Sabotage: the auditor catches an off-by-one bug");
     Run("sabotage", 4, (const char *[]){"-c", "data/rush-hour.cfg", "-s", "3", "-x", NULL});
     Expect("sabotage", "I5 queue capacity is not exceeded +FAILED", "queue overflow is caught");
+    Expect("sabotage", "soft assert failed: .* in Place", "SOFT_ASSERT in line.c catches it too");
 }
 
 static void TestSameSeed(void) {
@@ -324,13 +325,14 @@ static void TestManySeeds(void) {
             char s[16];
             snprintf(s, sizeof(s), "%d", seed);
             int code = Wait(Start("stress", (const char *[]){"-c", configs[c], "-s", s, NULL}));
-            if (code != 0 || !Matches("stress", "out", "violations: 0")) {
+            if (code != 0 || !Matches("stress", "out", "violations: 0") ||
+                Matches("stress", "out", "soft assert")) {
                 printf("    %s seed %d: exit %d\n", configs[c], seed, code);
                 ++bad;
             }
         }
     }
-    Report(bad == 0, "stress", "200 runs, 0 violations");
+    Report(bad == 0, "stress", "200 runs, 0 violations, no soft asserts");
 }
 
 int main(int argc, char **argv) {

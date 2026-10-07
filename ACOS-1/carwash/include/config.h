@@ -1,33 +1,44 @@
+/**
+ * @file config.h
+ * @brief Параметры модели и их разбор.
+ *
+ * Параметры читаются из файла вида "ключ = значение" (ключ -c),
+ * а если файла нет - из встроенной конфигурации CONFIG_BUILTIN.
+ */
 #ifndef CONFIG_H
 #define CONFIG_H
-
-// Параметры модели. Читаются из файла вида "ключ = значение" (-c),
-// а если файла нет - из встроенной конфигурации CONFIG_BUILTIN.
 
 #define MAX_STAGES   6
 #define MAX_POSTS    4
 #define MAX_PROGRAMS 6
-#define MAX_QUEUE    16  // размер массива; вместимость из конфига строго меньше
+#define MAX_QUEUE    16  ///< размер массива; вместимость из конфига строго меньше
 #define NAME_LEN     12
 
-typedef enum { PRIO_FIFO, PRIO_PROGRAM, PRIO_SHORTEST } PriorityRule;
+/// Кого первым забирать из очереди.
+typedef enum {
+    PRIO_FIFO,      ///< кто раньше приехал
+    PRIO_PROGRAM,   ///< у чьей программы приоритет выше
+    PRIO_SHORTEST,  ///< кому осталось меньше мыться
+} PriorityRule;
 
 typedef enum {
-    VIEW_AUTO,  // live в терминале, log если вывод перенаправлен
+    VIEW_AUTO,  ///< live в терминале, log если вывод перенаправлен
     VIEW_LOG,
     VIEW_LIVE,
 } ViewMode;
 
+/// Стадия мойки: строка "stage = имя посты tmin tmax очередь".
 typedef struct {
     char name[NAME_LEN];
-    int posts;  // 0 постов допустимо - так проверяется тупик
-    int tmin, tmax;
-    int queue;
+    int posts;       ///< 0 постов допустимо - так проверяется тупик
+    int tmin, tmax;  ///< время операции, минут
+    int queue;       ///< вместимость накопителя перед стадией
 } StageSpec;
 
+/// Программа обслуживания: маршрут по стадиям.
 typedef struct {
     char name[NAME_LEN];
-    int weight;  // как часто клиенты выбирают программу
+    int weight;  ///< как часто клиенты выбирают программу
     int priority;
     int route[MAX_STAGES];
     int len;
@@ -39,35 +50,39 @@ typedef struct {
     ProgramSpec program[MAX_PROGRAMS];
     int programs;
 
-    int cars;  // 0 - без ограничения
+    int cars;  ///< 0 - без ограничения
     int arrMin, arrMax;
-    int day;  // минут, 0 - без ограничения
+    int day;  ///< длина дня в минутах, 0 - без ограничения
     double failP;
     int repairMin, repairMax;
     PriorityRule rule;
 
     unsigned seed;
     int seedSet;
-    int delayMs;  // -1 - выбрать по режиму
+    int delayMs;  ///< -1 - выбрать по режиму
     ViewMode view;
     char journal[256];
-    int sabotage;
+    int sabotage;  ///< ключ -x
 } Config;
 
+/// Конфигурация по умолчанию: обычный день, четыре стадии, три программы.
 extern const char *CONFIG_BUILTIN;
 
 void ConfigDefaults(Config *c);
 
-// функции разбора возвращают 0 или -1 и пишут причину в err
+/// @return 0 или -1, причина ошибки - в @p err
 int ConfigParseText(Config *c, const char *text, char *err, int errSize);
+/// @return 0 или -1, причина ошибки - в @p err
 int ConfigLoadFile(Config *c, const char *path, char *err, int errSize);
+/// Проверяет, что параметры не противоречат друг другу. @return 0 или -1
 int ConfigValidate(const Config *c, char *err, int errSize);
 
+/// Ключ -i: спрашивает основные параметры с клавиатуры.
 void ConfigInteractive(Config *c);
 void ConfigPrint(const Config *c, int fd);
 const char *ConfigRuleName(PriorityRule rule);
 
-// 0 и число в *out, или -1, если строка - не целое число
+/// @return 0 и число в *out, или -1, если строка - не целое число
 int ParseInt(const char *s, int *out);
 
 #endif

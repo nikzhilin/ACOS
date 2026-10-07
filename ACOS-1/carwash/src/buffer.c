@@ -1,4 +1,5 @@
 #include "buffer.h"
+#include "soft_assert.h"
 
 #include <string.h>
 
@@ -12,7 +13,7 @@ int BufferHasRoom(const Buffer *b, int extra) {
 }
 
 void BufferPush(Buffer *b, int car) {
-    if (b->count < MAX_QUEUE) {
+    if (SOFT_ASSERT(b->count < MAX_QUEUE, "queue array is full")) {
         b->car[b->count++] = car;
     }
 }

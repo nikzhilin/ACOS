@@ -1,13 +1,13 @@
 #include "rng.h"
 
-// xorshift не выходит из нуля, поэтому ноль как seed заменяем
+/// xorshift не выходит из нуля, поэтому ноль как seed заменяем
 static uint32_t state = 2463534242U;
 
 void RngSeed(uint32_t seed) {
     state = seed ? seed : 2463534242U;
 }
 
-// Marsaglia, "Xorshift RNGs", 2003
+/// Marsaglia, "Xorshift RNGs", 2003
 static uint32_t Next(void) {
     state ^= state << 13U;
     state ^= state >> 17U;

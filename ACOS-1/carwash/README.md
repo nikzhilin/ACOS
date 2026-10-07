@@ -39,6 +39,7 @@ src/       реализация
   events.c     шина событий
   view_log.c view_live.c auditor.c gantt.c stats.c   подписчики на события
   config.c     разбор параметров
+  soft_assert.c  мягкие проверки (SOFT_ASSERT)
   main.c       ключи, сигналы, главный цикл
 data/      сценарии
 tests/     run_tests.c - сценарные тесты
@@ -49,12 +50,31 @@ tests/     run_tests.c - сценарные тесты
 Каждую минуту стадии обходятся от сушки к въезду, поэтому освободившееся
 место сразу занимает следующая машина и блокировки снимаются сами.
 
-## Тесты, форматирование, clang-tidy
+## SOFT_ASSERT
+
+`include/soft_assert.h` - мягкая проверка предусловий. В отличие от `assert()` она
+не роняет программу: пишет в stderr условие, файл, строку и функцию, и работа идёт
+дальше, так что журнал и статистика сохраняются. Макрос возвращает значение условия,
+поэтому рядом можно обойти плохой случай:
+
+```c
+if (!SOFT_ASSERT(c >= 0, "queue was not empty")) {
+    break;
+}
+```
+
+Стоит там, где функция полагается на вызывающего: пост свободен и исправен перед
+`PostStart`, в очереди есть место перед `BufferPush`, маршрут машины не кончился и т.п.
+Аудитор проверяет линию снаружи по событиям, а SOFT_ASSERT - изнутри, в момент вызова.
+С `-x` срабатывают оба. При сборке с `-DNDEBUG` сообщения отключаются.
+
+## Тесты, форматирование, clang-tidy, документация
 
 ```bash
 cmake --build build --target check    # сценарные тесты (tests/run_tests.c)
 cmake --build build --target format   # clang-format по .clang-format
 cmake --build build --target tidy     # clang-tidy по .clang-tidy
+cmake --build build --target docs     # Doxygen, открыть build/doxygen/html/index.html
 ```
 
 Тесты написаны на C: `run_tests` запускает `bin/carwash` на файлах из `data/`
@@ -63,4 +83,5 @@ cmake --build build --target tidy     # clang-tidy по .clang-tidy
 
 Для `format` и `tidy` нужны clang-format и clang-tidy. На macOS: `brew install llvm`
 (CMake сам найдёт их в `/opt/homebrew/opt/llvm/bin`), на Linux: `apt install clang-format clang-tidy`.
-Если их нет, цели напишут, что поставить.
+Для `docs` нужен doxygen (`brew install doxygen` или `apt install doxygen`).
+Если чего-то нет, цели напишут, что поставить.

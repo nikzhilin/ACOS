@@ -69,3 +69,15 @@ else()
         COMMAND ${CMAKE_COMMAND} -E echo "clang-tidy not found: brew install llvm (or apt install clang-tidy)"
         COMMAND ${CMAKE_COMMAND} -E false)
 endif()
+
+# Doxygen: cmake --build build --target docs, открыть build/doxygen/html/index.html
+find_package(Doxygen QUIET)
+if(DOXYGEN_FOUND)
+    add_custom_target(docs
+        COMMAND ${DOXYGEN_EXECUTABLE} Doxyfile
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+else()
+    add_custom_target(docs
+        COMMAND ${CMAKE_COMMAND} -E echo "doxygen not found: brew install doxygen (or apt install doxygen)"
+        COMMAND ${CMAKE_COMMAND} -E false)
+endif()

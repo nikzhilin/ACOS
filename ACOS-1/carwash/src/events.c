@@ -2,6 +2,7 @@
 
 #include "events.h"
 #include "line.h"
+#include "soft_assert.h"
 
 #define MAX_LISTENERS 8
 #define DAY_START     (8 * 60)  // мойка открывается в 08:00
@@ -10,7 +11,7 @@ static Listener listeners[MAX_LISTENERS];
 static int listenerCount = 0;
 
 void EventsSubscribe(Listener listener) {
-    if (listenerCount < MAX_LISTENERS) {
+    if (SOFT_ASSERT(listenerCount < MAX_LISTENERS, "too many listeners")) {
         listeners[listenerCount++] = listener;
     }
 }

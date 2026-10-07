@@ -1,12 +1,15 @@
-// Координатор линии.
-//
-// Каждую минуту стадии обходим с конца (от сушки к въезду), как конвейер:
-// машина уехала с сушки - в эту же минуту на её место встаёт машина из
-// тоннеля, на место той - машина с предмойки и т.д. Поэтому блокировки
-// снимаются сами, отдельно искать "кто кого ждёт" не нужно.
-//
-// Сначала меняем состояние, потом шлём события - чтобы аудитор видел
-// линию уже в целом виде, а не посередине перестановки.
+/**
+ * @file line.c
+ * @brief Координатор линии.
+ *
+ * Каждую минуту стадии обходим с конца (от сушки к въезду), как конвейер:
+ * машина уехала с сушки - в эту же минуту на её место встаёт машина из
+ * тоннеля, на место той - машина с предмойки и т.д. Поэтому блокировки
+ * снимаются сами, отдельно искать "кто кого ждёт" не нужно.
+ *
+ * Сначала меняем состояние, потом шлём события - чтобы аудитор видел
+ * линию уже в целом виде, а не посередине перестановки.
+ */
 
 #include <stdlib.h>
 #include <string.h>
@@ -15,6 +18,7 @@
 #include "line.h"
 #include "memory.h"
 #include "rng.h"
+#include "soft_assert.h"
 
 #define EMIT(type, car, stage, post, arg) EventsEmit(l, (type), (car), (stage), (post), (arg))
 
@@ -37,8 +41,8 @@ void LineFree(Line *l) {
     l->cars = NULL;
 }
 
-// Свободный пост, на который можно заехать сразу, мимо очереди.
-// Если в очереди кто-то стоит, без очереди не пускаем: -1.
+/// Свободный пост, на который можно заехать сразу, мимо очереди.
+/// Если в очереди кто-то стоит, без очереди не пускаем: -1.
 static int DirectPost(const Line *l, int s) {
     if (l->stage[s].queue.count > 0) {
         return -1;
@@ -51,13 +55,13 @@ static int DirectPost(const Line *l, int s) {
     return -1;
 }
 
-// Есть ли на стадии s место ещё для одной машины.
-// С -x здесь специально ошибка на единицу - проверка, что аудитор её поймает.
+/// Есть ли на стадии s место ещё для одной машины.
+/// С -x здесь специально ошибка на единицу - проверка, что аудитор её поймает.
 static int CanAccept(const Line *l, int s) {
     return DirectPost(l, s) >= 0 || BufferHasRoom(&l->stage[s].queue, l->cfg->sabotage);
 }
 
-// Кого первым забрать из очереди (правило priority из конфига)
+/// Кого первым забрать из очереди (правило priority из конфига)
 static int Score(int c, const void *ctx) {
     const Line *l = ctx;
     const Car *car = &l->cars[c];
@@ -68,6 +72,7 @@ static int Score(int c, const void *ctx) {
     }
 }
 
+/// Машина c встаёт на пост p стадии s, время операции случайное из [tmin, tmax]
 static void StartOnPost(Line *l, int c, int s, int p) {
     const StageSpec *spec = &l->cfg->stage[s];
     int duration = RngRange(spec->tmin, spec->tmax);
@@ -80,14 +85,16 @@ static void StartOnPost(Line *l, int c, int s, int p) {
     l->moved = 1;
 }
 
-// Ставит машину на стадию s: на свободный пост или в очередь.
-// Место должно быть заранее проверено через CanAccept.
+/// Ставит машину на стадию s: на свободный пост или в очередь.
+/// Место должно быть заранее проверено через CanAccept.
 static void Place(Line *l, int c, int s) {
     int p = DirectPost(l, s);
     if (p >= 0) {
         StartOnPost(l, c, s, p);
         return;
     }
+    // с -x CanAccept пропускает лишнюю машину, и это ловится здесь
+    SOFT_ASSERT(BufferHasRoom(&l->stage[s].queue, 0), "no room in the queue");
     BufferPush(&l->stage[s].queue, c);
     l->cars[c].place = CAR_QUEUE;
     l->cars[c].stage = s;
@@ -95,7 +102,7 @@ static void Place(Line *l, int c, int s) {
     l->moved = 1;
 }
 
-// События о том, куда в итоге попала машина после Place
+/// События о том, куда в итоге попала машина после Place
 static void Announce(Line *l, int c) {
     const Car *car = &l->cars[c];
     if (car->place == CAR_QUEUE) {
@@ -111,6 +118,7 @@ static void Close(Line *l) {
     EMIT(EV_CLOSE, -1, -1, -1, l->inside);
 }
 
+/// Сломанные посты чинятся, исправные могут сломаться
 static void UpdateEquipment(Line *l) {
     const Config *cfg = l->cfg;
     for (int s = 0; s < cfg->stages; ++s) {
@@ -129,10 +137,13 @@ static void UpdateEquipment(Line *l) {
     }
 }
 
-// Машину на посту помыли - пробуем отправить её дальше
+/// Машину на посту помыли - пробуем отправить её дальше
 static void TryLeave(Line *l, int s, int p) {
     Post *post = &l->stage[s].post[p];
     int c = post->car;
+    if (!SOFT_ASSERT(c >= 0, "nobody to send further")) {
+        return;
+    }
     Car *car = &l->cars[c];
     int next = CarNextStage(car, l->cfg);
 
@@ -164,6 +175,7 @@ static void TryLeave(Line *l, int s, int p) {
     Announce(l, c);
 }
 
+/// Одна стадия за минуту: моем, выпускаем помытых, забираем следующих из очереди
 static void SweepStage(Line *l, int s) {
     Stage *st = &l->stage[s];
     int posts = l->cfg->stage[s].posts;
@@ -181,12 +193,16 @@ static void SweepStage(Line *l, int s) {
     for (int p = 0; p < posts && st->queue.count > 0; ++p) {
         if (PostStateOf(&st->post[p]) == POST_IDLE) {
             int c = BufferPopBest(&st->queue, Score, l);
+            if (!SOFT_ASSERT(c >= 0, "queue was not empty")) {
+                break;
+            }
             StartOnPost(l, c, s, p);
             Announce(l, c);
         }
     }
 }
 
+/// Новая машина на въезде: принимаем или отказываем, если первой стадии некуда её поставить
 static void Arrive(Line *l) {
     if (l->carCount == l->carCap) {
         l->carCap = l->carCap ? l->carCap * 2 : 64;
@@ -216,9 +232,9 @@ static void Arrive(Line *l) {
     }
 }
 
-// Может ли на линии ещё что-то сдвинуться: кто-то моется или чинят пост,
-// который кому-то нужен. Ремонт пустого поста, которого никто не ждёт,
-// не считается - иначе при частых поломках тупик находился бы через недели.
+/// Может ли на линии ещё что-то сдвинуться: кто-то моется или чинят пост,
+/// который кому-то нужен. Ремонт пустого поста, которого никто не ждёт,
+/// не считается - иначе при частых поломках тупик находился бы через недели.
 static int AnyProgressPossible(const Line *l) {
     const Config *cfg = l->cfg;
     int wanted[MAX_STAGES] = {0};  // куда хотят уехать уже помытые машины
@@ -246,7 +262,7 @@ static int AnyProgressPossible(const Line *l) {
     return 0;
 }
 
-// Пустят ли на въезд хоть кого-нибудь (пустой пост, даже сломанный, тоже считается)
+/// Пустят ли на въезд хоть кого-нибудь (пустой пост, даже сломанный, тоже считается)
 static int EntranceMayAccept(const Line *l) {
     const Config *cfg = l->cfg;
     for (int i = 0; i < cfg->programs; ++i) {
@@ -263,7 +279,7 @@ static int EntranceMayAccept(const Line *l) {
     return 0;
 }
 
-// Для сообщения о тупике: стадия без постов, в которую все упёрлись
+/// Для сообщения о тупике: стадия без постов, в которую все упёрлись
 static int FindStallCause(const Line *l) {
     const Config *cfg = l->cfg;
     for (int c = 0; c < l->carCount; ++c) {
@@ -282,6 +298,7 @@ static int FindStallCause(const Line *l) {
     return -1;
 }
 
+/// Пора ли заканчивать: все уехали или наступил тупик
 static void CheckEnd(Line *l) {
     if (!l->open && l->inside == 0) {
         l->status = LINE_FINISHED;

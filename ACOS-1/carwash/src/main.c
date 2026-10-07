@@ -1,7 +1,10 @@
-// Автомойка, вариант 43. Одна итерация главного цикла = одна минута модели.
-//
-// Коды выхода: 0 - всё вымыто, 1 - плохие параметры, 2 - тупик,
-// 3 - прервали сигналом, 4 - аудитор нашёл нарушение, 5 - кончилась память.
+/**
+ * @file main.c
+ * @brief Автомойка, вариант 43. Одна итерация главного цикла = одна минута модели.
+ *
+ * Коды выхода: 0 - всё вымыто, 1 - плохие параметры, 2 - тупик,
+ * 3 - прервали сигналом, 4 - аудитор нашёл нарушение, 5 - кончилась память.
+ */
 
 #include <errno.h>
 #include <fcntl.h>
@@ -18,11 +21,12 @@
 #include "gantt.h"
 #include "line.h"
 #include "rng.h"
+#include "soft_assert.h"
 #include "stats.h"
 #include "view_live.h"
 #include "view_log.h"
 
-// в обработчике сигнала можно только выставить флаг, остальное делает main
+/// в обработчике сигнала можно только выставить флаг, остальное делает main
 static volatile sig_atomic_t stopRequested = 0;
 
 static void OnSignal(int sig) {
@@ -40,7 +44,7 @@ static void InstallSignals(void) {
     sigaction(SIGTERM, &sa, NULL);
 }
 
-// nanosleep прерывается сигналом, так что Ctrl+C срабатывает сразу
+/// nanosleep прерывается сигналом, так что Ctrl+C срабатывает сразу
 static void Delay(int ms) {
     struct timespec left = {ms / 1000, (long)(ms % 1000) * 1000000L};
     while (ms > 0 && nanosleep(&left, &left) == -1 && errno == EINTR && !stopRequested) {
@@ -203,6 +207,11 @@ int main(int argc, char **argv) {
         dprintf(journal, "seed %u (repeat the run with -s %u)\n", cfg.seed, cfg.seed);
         close(journal);
         dprintf(1, "Journal saved to %s (seed %u)\n", cfg.journal, cfg.seed);
+    }
+
+    if (SoftAssertFailures() > 0) {
+        dprintf(2, "carwash: soft asserts failed %ld time(s), see messages above\n",
+                SoftAssertFailures());
     }
 
     int code = ExitCode(&line);
